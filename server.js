@@ -1,3 +1,4 @@
+import { analyze } from './ai.js';
 import http from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,15 @@ function json(res, code, body) { res.writeHead(code, { 'Content-Type': 'applicat
 http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/api/analyze' && req.method === 'POST') {
+      let body = '';
+      for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 16000) return json(res, 413, {error:'Request too large'}); }
+      let input;
+      try { input = JSON.parse(body); } catch { return json(res,400,{error:'Invalid JSON'}); }
+      if (!input || typeof input !== 'object' || !input.name) return json(res,400,{error:'Business name required'});
+      try { return json(res,200,await analyze(input,{apiKey:process.env.GEMINI_API_KEY,model:process.env.GEMINI_MODEL || 'gemini-2.5-flash'})); }
+      catch (error) { return json(res,502,{error:error.name === 'TimeoutError' ? 'AI analysis timed out. Try again.' : error.message}); }
+    }
     if (url.pathname === '/api/discovery/status' && req.method === 'GET') return json(res, 200, { configured: Boolean(process.env.GOOGLE_MAPS_API_KEY) });
     if (url.pathname === '/api/discover' && req.method === 'GET') {
       if (!process.env.GOOGLE_MAPS_API_KEY) return json(res, 503, { error: 'Add GOOGLE_MAPS_API_KEY securely in environment settings, enable Places API (New) and billing, then restart the app.' });

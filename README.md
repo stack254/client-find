@@ -45,3 +45,7 @@ Choose a country and town, then click Find opportunities. The browser runs up to
 ## Lead qualification
 
 Automatic runs rank results by an explicit research-priority score: missing website or social-only listing +45, listed phone +30, at least 10 reviews +15 (1–9 reviews +5), social presence +10. Reviews are supporting activity signals, not evidence of budget or buying intent. The website-opportunity filter requires both a missing/social-only site and a listed phone. Social detection uses hostname boundaries; website contents are not crawled. Review counts add a Google response field and may affect provider pricing. Saved prospect notes retain score reasons and the Maps source link. No automatic profile scraping or message sending occurs.
+
+## Optional Gemini briefs
+
+Set GEMINI_API_KEY in local .env and restart. Each discovered card has an AI brief button for a potential offer, evidence, verification questions and editable outreach draft. Only listing research fields are sent, not prospect notes or phone numbers. Successful responses are reused while those results remain in the page. Model defaults to gemini-2.5-flash; override GEMINI_MODEL if unavailable in your project. Free-tier access and quotas depend on Google; live integration has not been verified in the cloud. AI does not browse websites or send messages. Provider errors leave regular discovery available.

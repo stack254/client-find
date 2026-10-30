@@ -73,7 +73,7 @@ $('#discovery-form').onsubmit = async event => {
     if (!response.ok) throw Error(result.error);
     discoveryResults = result;
     $('#provider-status').textContent = `${result.length} results · Source: Google Maps. Suggestions require your review.`;
-    $('#discovery-results').innerHTML = result.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#discovery-results').innerHTML = result.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button data-ai="${i}">✦ AI brief</button><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
   } catch (error) { $('#provider-status').textContent = error.message; } finally { $('#discover-button').disabled = false; }
 };
 $('#discovery-results').onclick = event => {
@@ -90,7 +90,7 @@ $('#try-demo').onclick = () => {
     {name:'Example cleaning company (DEMO)',location:'Mombasa · fictional example',service:'Digital marketing',evidence:'Example scenario: the owner wants more local enquiries and help planning campaigns.'}
   ].map(p => ({...p, demo:true, contact:'', website:''}));
   $('#provider-status').textContent = 'Demo examples — fictional businesses. No Google request or quota used.';
-  $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">Fictional example</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Try reviewing</button></div></article>`).join('');
+  $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">Fictional example</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p></div><div class="actions"><button data-ai="${i}">✦ AI brief</button><button class="secondary" data-review="${i}">Try reviewing</button></div></article>`).join('');
 };
 
 $('#country').onchange = () => { $('#location').value = ''; $('#location').placeholder = { KE:'e.g. Nairobi or Mombasa', BW:'e.g. Gaborone or Francistown', ZM:'e.g. Lusaka or Ndola' }[$('#country').value]; };
@@ -129,7 +129,7 @@ $('#run-campaign').onclick = async () => {
   } catch (error) { failure = error.message; }
   finally {
     discoveryResults = [...found.values()].sort((a,b) => (b.score || 0) - (a.score || 0));
-    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button data-ai="${i}">✦ AI brief</button><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
     $('#provider-status').textContent = 'Source: Google Maps. Ranked by available listing evidence, not confirmed buying intent.';
     $('#campaign-status').textContent = `${failure ? 'Run interrupted: ' + failure : stopCampaign ? 'Run stopped.' : 'Run complete.'} ${completed} searches completed; ${found.size} unique businesses available for review.`;
     $('#run-campaign').disabled = false; $('#stop-campaign').disabled = true;
@@ -147,3 +147,23 @@ function updateResultSummary() {
 }
 new MutationObserver(updateResultSummary).observe($('#discovery-results'), {childList:true});
 $('#qualified-only').addEventListener('change', updateResultSummary);
+
+$('#discovery-results').addEventListener('click', async event => {
+  const index = event.target.dataset.ai;
+  if (index === undefined) return;
+  const p = discoveryResults[Number(index)];
+  const button = event.target;
+  $('#ai-dialog').showModal(); $('#ai-content').textContent = 'Preparing an evidence-based brief…';
+  button.disabled = true;
+  try {
+    if (!p.aiBrief) {
+      const response = await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:p.name,location:p.location,website:p.website,evidence:p.evidence,websiteStatus:p.websiteStatus,service:p.service})});
+      const data = await response.json(); if (!response.ok) throw Error(data.error); p.aiBrief = data;
+    }
+    const brief = p.aiBrief;
+    $('#ai-content').innerHTML = `<p class="footnote">AI suggestion based on listing data. No website audit has been performed. Verify before using.</p><h3>Potential offer</h3><p>${escape(brief.opportunity)}</p><h3>Evidence</h3><p>${escape(brief.evidence)}</p><h3>What to check</h3><p>${escape(brief.verify)}</p><h3>Your message</h3><textarea id="ai-message" rows="7" aria-label="Editable AI draft">${escape(brief.message)}</textarea><button id="use-ai-message">Use in outreach editor</button>`;
+    $('#use-ai-message').onclick = () => { $('#draft').value = $('#ai-message').value; $('#copy-status').textContent = ''; $('#ai-dialog').close(); $('#outreach').showModal(); };
+  } catch(error) { $('#ai-content').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+$('#close-ai').onclick = () => $('#ai-dialog').close();
