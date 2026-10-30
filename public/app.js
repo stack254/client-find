@@ -64,7 +64,9 @@ fetch('/api/discovery/status').then(r => r.json()).then(status => {
   $('#provider-status').textContent = status.configured ? 'Google Places key is configured. Search to check provider access.' : 'Discovery needs GOOGLE_MAPS_API_KEY in secure environment settings. Enable Places API (New) and billing, then restart.';
 }).catch(() => { $('#provider-status').textContent = 'Unable to check provider configuration.'; });
 $('#discovery-form').onsubmit = async event => {
-  event.preventDefault(); $('#discover-button').disabled = true; $('#provider-status').textContent = 'Searching Google Places…'; $('#discovery-results').replaceChildren();
+  event.preventDefault();
+  if (!$('#category').value.trim()) { $('#run-campaign').click(); return; }
+  $('#discover-button').disabled = true; $('#provider-status').textContent = 'Searching Google Places…'; $('#discovery-results').replaceChildren();
   try {
     const query = new URLSearchParams({ country: $('#country').value, category: $('#category').value, location: $('#location').value });
     const response = await fetch('/api/discover?' + query); const result = await response.json();
