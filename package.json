@@ -1,0 +1,8 @@
+{
+  "name": "client-find",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node --env-file-if-exists=.env server.js", "test": "node discovery.test.js" },
+  "engines": { "node": ">=22" }
+}
