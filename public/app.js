@@ -44,7 +44,7 @@ fetch('/api/discovery/status').then(r => r.json()).then(status => {
 $('#discovery-form').onsubmit = async event => {
   event.preventDefault(); $('#discover-button').disabled = true; $('#provider-status').textContent = 'Searching Google Places…'; $('#discovery-results').replaceChildren();
   try {
-    const query = new URLSearchParams({ category: $('#category').value, location: $('#location').value });
+    const query = new URLSearchParams({ country: $('#country').value, category: $('#category').value, location: $('#location').value });
     const response = await fetch('/api/discover?' + query); const result = await response.json();
     if (!response.ok) throw Error(result.error);
     discoveryResults = result;
@@ -56,5 +56,17 @@ $('#discovery-results').onclick = event => {
   const index = event.target.dataset.review;
   if (index === undefined) return;
   const p = discoveryResults[Number(index)];
-  edit({ name:p.name, location:p.location, contact:p.contact, website:p.website, service:p.service, status:'New', need:p.evidence, notes:'Discovered through Google Maps. Verify details and provider retention terms before saving.' });
+  edit({ name:p.name, location:p.location, contact:p.contact, website:p.website, service:p.service, status:'New', need:p.evidence, notes:p.demo ? 'FICTIONAL DEMO — not a real business or sales lead.' : 'Discovered through Google Maps. Verify details and provider retention terms before saving.' });
 };
+
+$('#try-demo').onclick = () => {
+  discoveryResults = [
+    {name:'Example furniture shop (DEMO)',location:'Nairobi · fictional example',service:'Online store',evidence:'Example scenario: products are advertised online, but buyers must phone to place orders.'},
+    {name:'Example salon (DEMO)',location:'Nakuru · fictional example',service:'Website development',evidence:'Example scenario: the owner wants a dedicated page for services, prices and booking enquiries.'},
+    {name:'Example cleaning company (DEMO)',location:'Mombasa · fictional example',service:'Digital marketing',evidence:'Example scenario: the owner wants more local enquiries and help planning campaigns.'}
+  ].map(p => ({...p, demo:true, contact:'', website:''}));
+  $('#provider-status').textContent = 'Demo examples — fictional businesses. No Google request or quota used.';
+  $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">Fictional example</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Try reviewing</button></div></article>`).join('');
+};
+
+$('#country').onchange = () => { $('#location').value = ''; $('#location').placeholder = { KE:'e.g. Nairobi or Mombasa', BW:'e.g. Gaborone or Francistown', ZM:'e.g. Lusaka or Ndola' }[$('#country').value]; };

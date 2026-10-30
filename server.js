@@ -3,7 +3,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { discover } from './discovery.js';
+import { discover, countries } from './discovery.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataPath = path.join(root, 'data', 'prospects.json');
@@ -24,10 +24,12 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/api/discovery/status' && req.method === 'GET') return json(res, 200, { configured: Boolean(process.env.GOOGLE_MAPS_API_KEY) });
     if (url.pathname === '/api/discover' && req.method === 'GET') {
       if (!process.env.GOOGLE_MAPS_API_KEY) return json(res, 503, { error: 'Add GOOGLE_MAPS_API_KEY securely in environment settings, enable Places API (New) and billing, then restart the app.' });
+      const country = url.searchParams.get('country') || 'KE';
+      if (!Object.hasOwn(countries, country)) return json(res, 400, { error: 'Choose Kenya, Botswana or Zambia.' });
       const location = (url.searchParams.get('location') || '').trim();
       const category = (url.searchParams.get('category') || '').trim();
       if (!location || !category || location.length > 150 || category.length > 150) return json(res, 400, { error: 'Enter a location and business type (up to 150 characters each).' });
-      try { return json(res, 200, await discover({ location, category, apiKey: process.env.GOOGLE_MAPS_API_KEY })); }
+      try { return json(res, 200, await discover({ location, category, country, apiKey: process.env.GOOGLE_MAPS_API_KEY })); }
       catch (error) { return json(res, 502, { error: error.name === 'TimeoutError' ? 'Search timed out. Try again.' : error.message }); }
     }
     if (url.pathname === '/api/prospects' && req.method === 'GET') return json(res, 200, prospects);

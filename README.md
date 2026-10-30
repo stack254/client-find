@@ -1,6 +1,6 @@
 # Client Find
 
-RetailHub PRO's local prospect workspace for Kenyan businesses needing websites, online stores and digital marketing. Search Google Places by business type and location, review evidence-based service suggestions, add businesses, track conversations, and prepare editable outreach drafts. No messages are sent automatically. No sample leads are represented as real prospects.
+RetailHub PRO's local prospect workspace for businesses in Kenya, Botswana and Zambia needing websites, online stores and digital marketing. Search Google Places by business type and location, review evidence-based service suggestions, add businesses, track conversations, and prepare editable outreach drafts. No messages are sent automatically. No sample leads are represented as real prospects.
 
 ## Run
 
@@ -32,7 +32,7 @@ For future updates, stop the server, run `git pull --ff-only`, then `npm start` 
 
 ## Discovery configuration
 
-Set `GOOGLE_MAPS_API_KEY` securely in the server environment, enable Google Places API (New), enable billing, and permit HTTPS to `places.googleapis.com`. The key remains on the server and is sent in the `X-Goog-Api-Key` header. Never put it in frontend code or commit it. Restart after configuration changes. Each search makes one Text Search request, with up to 20 results; requested website/phone fields can affect pricing. Set provider budgets and quotas. Searches are biased toward Kenya, but results must be reviewed for the correct location.
+Set `GOOGLE_MAPS_API_KEY` securely in the server environment, enable Google Places API (New), enable billing, and permit HTTPS to `places.googleapis.com`. The key remains on the server and is sent in the `X-Goog-Api-Key` header. Never put it in frontend code or commit it. Restart after configuration changes. Each search makes one Text Search request, with up to 20 results; requested website/phone fields can affect pricing. Set provider budgets and quotas. Searches use the selected country as a regional bias, but results must be reviewed for the correct location.
 
 Search results are transient until explicitly reviewed and saved. Missing website data is not proof of an absent website; retail category is not proof that an online store is needed. Google Maps Platform terms govern use and retention of returned data; review applicable terms before retaining provider content or operating a lead-generation workflow. This app does not verify emails, crawl websites, send messages, or guarantee sales.
 

@@ -21,3 +21,15 @@ test('discovery uses server header auth, Kenya query and filters permanently clo
 test('provider denial gives an actionable error', async () => {
   await assert.rejects(discover({location:'Nairobi',category:'shops',apiKey:'test',fetcher:async () => ({ok:false,status:403})}), /billing and key restrictions/);
 });
+
+test('each target country reaches the provider and unsupported countries do not', async () => {
+  for (const [country, name] of [['KE','Kenya'],['BW','Botswana'],['ZM','Zambia']]) {
+    await discover({location:'City',category:'shops',country,apiKey:'test',fetcher:async (_,options) => {
+      const body = JSON.parse(options.body);
+      assert.equal(body.regionCode,country);
+      assert.equal(body.textQuery,`shops in City, ${name}`);
+      return {ok:true,json:async () => ({places:[]})};
+    }});
+  }
+  await assert.rejects(discover({country:'XX',fetcher:() => {throw Error('must not call provider');}}), /Choose Kenya/);
+});
