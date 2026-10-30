@@ -1,12 +1,30 @@
 const $ = selector => document.querySelector(selector);
 let prospects = [];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function contactLinks(p) {
+  const links = [];
+  const raw = (p.contact || '').trim();
+  const digits = raw.replace(/[\s().-]/g, '');
+  if (/^\+[1-9]\d{7,14}$/.test(digits)) {
+    const message = `Hello ${p.name} team, I'm [your name] from RetailHub PRO. We build business websites and booking tools. Are you the right person to ask about your website needs?`;
+    links.push(`<a class="contact-link" target="_blank" rel="noopener noreferrer" href="https://wa.me/${digits.slice(1)}?text=${encodeURIComponent(message)}">Try WhatsApp ↗</a>`);
+    links.push(`<a class="contact-link" href="tel:${digits}">Call</a>`);
+  }
+  try {
+    const url = new URL(p.website);
+    if (['https:', 'http:'].includes(url.protocol)) {
+      const social = /(^|\.)(facebook\.com|instagram\.com|tiktok\.com|linkedin\.com)$/i.test(url.hostname);
+      links.push(`<a class="contact-link" target="_blank" rel="noopener noreferrer" href="${escape(url.href)}">${social ? 'Open social profile' : 'Review website'} ↗</a>`);
+    }
+  } catch {}
+  return `<div class="contact-links">${links.join(' ')}</div>${links.some(l => l.includes('wa.me')) ? '<small>WhatsApp availability unverified. Review and personalize the draft before sending.</small>' : '<small>Add a phone number with country code to enable WhatsApp.</small>'}`;
+}
 function render() {
   const metrics = [['Total prospects', prospects.length], ['Ready to contact', prospects.filter(p => p.status === 'New').length], ['Interested', prospects.filter(p => p.status === 'Interested').length], ['Clients won', prospects.filter(p => p.status === 'Won').length]];
   $('#stats').innerHTML = metrics.map(([label, value]) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   const search = $('#search').value.toLowerCase();
   const filtered = prospects.filter(p => (!$('#filter').value || p.status === $('#filter').value) && [p.name,p.location,p.service,p.need].join(' ').toLowerCase().includes(search));
-  $('#list').innerHTML = filtered.length ? filtered.map(p => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location || 'Location not recorded')} · ${escape(p.contact || 'Contact not recorded')}</p><span class="tag">${escape(p.service)}</span><span class="tag">${escape(p.status)}</span><p>${escape(p.need || 'Add an observed need to make your outreach more relevant.')}</p></div><div class="actions"><button class="secondary" data-edit="${escape(p.id)}">Edit</button><button data-draft="${escape(p.id)}">Draft outreach</button></div></article>`).join('') : `<div class="empty"><strong>${prospects.length ? 'No matching prospects' : 'Your next client starts here.'}</strong>${prospects.length ? 'Try another search or stage.' : 'Add a business, record an opportunity, and prepare your first conversation.'}</div>`;
+  $('#list').innerHTML = filtered.length ? filtered.map(p => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location || 'Location not recorded')} · ${escape(p.contact || 'Contact not recorded')}</p><span class="tag">${escape(p.service)}</span><span class="tag">${escape(p.status)}</span><p>${escape(p.need || 'Add an observed need to make your outreach more relevant.')}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-edit="${escape(p.id)}">Edit</button><button data-draft="${escape(p.id)}">Draft outreach</button></div></article>`).join('') : `<div class="empty"><strong>${prospects.length ? 'No matching prospects' : 'Your next client starts here.'}</strong>${prospects.length ? 'Try another search or stage.' : 'Add a business, record an opportunity, and prepare your first conversation.'}</div>`;
 }
 async function load() { try { const response = await fetch('/api/prospects'); if (!response.ok) throw Error('Unable to load prospects'); prospects = await response.json(); render(); } catch (error) { $('#notice').textContent = error.message; } }
 function edit(prospect) {
@@ -49,7 +67,7 @@ $('#discovery-form').onsubmit = async event => {
     if (!response.ok) throw Error(result.error);
     discoveryResults = result;
     $('#provider-status').textContent = `${result.length} results · Source: Google Maps. Suggestions require your review.`;
-    $('#discovery-results').innerHTML = result.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#discovery-results').innerHTML = result.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
   } catch (error) { $('#provider-status').textContent = error.message; } finally { $('#discover-button').disabled = false; }
 };
 $('#discovery-results').onclick = event => {
@@ -105,7 +123,7 @@ $('#run-campaign').onclick = async () => {
   } catch (error) { failure = error.message; }
   finally {
     discoveryResults = [...found.values()].sort((a,b) => Number(b.priority === 'Review first') - Number(a.priority === 'Review first'));
-    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
     $('#provider-status').textContent = 'Source: Google Maps. Ranked by available listing evidence, not confirmed buying intent.';
     $('#campaign-status').textContent = `${failure ? 'Run interrupted: ' + failure : stopCampaign ? 'Run stopped.' : 'Run complete.'} ${completed} searches completed; ${found.size} unique businesses available for review.`;
     $('#run-campaign').disabled = false; $('#stop-campaign').disabled = true;
