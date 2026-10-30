@@ -1,7 +1,26 @@
 const fields = ['name','location','website','evidence','websiteStatus','service'];
-export async function analyze(input, {apiKey, model = 'gemini-2.5-flash', fetcher = fetch} = {}) {
+export async function analyze(input, {apiKey, model = 'auto', fetcher = fetch} = {}) {
   if (!apiKey) throw Error('Add GEMINI_API_KEY to your local .env and restart the app.');
   if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw Error('Invalid GEMINI_MODEL setting.');
+  if (model === 'auto') {
+    const available = [];
+    let token = '';
+    for (let page = 0; page < 10; page++) {
+      const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
+      url.searchParams.set('pageSize','1000');
+      if (token) url.searchParams.set('pageToken',token);
+      const listing = await fetcher(url.toString(), {headers:{'x-goog-api-key':apiKey},signal:AbortSignal.timeout(15000)});
+      if (!listing.ok) throw Error(listing.status === 429 ? 'Gemini model discovery quota reached. Try later.' : 'Cannot list Gemini models. Check your key and API access in AI Studio.');
+      const data = await listing.json();
+      available.push(...(data.models || []));
+      token = data.nextPageToken || '';
+      if (!token) break;
+    }
+    const candidates = available.filter(m => m.supportedGenerationMethods?.includes('generateContent') && /^models\/gemini-[a-zA-Z0-9._-]+$/.test(m.name) && /flash/.test(m.name) && !/image|audio|tts|live|robotics/.test(m.name));
+    candidates.sort((a,b) => Number(/preview|exp/.test(a.name)) - Number(/preview|exp/.test(b.name)) || b.name.localeCompare(a.name,undefined,{numeric:true}));
+    if (!candidates.length) throw Error('No compatible Gemini Flash text model is listed. Set GEMINI_MODEL to an available text model from AI Studio.');
+    model = candidates[0].name.slice('models/'.length);
+  }
   const facts = Object.fromEntries(fields.map(k => [k,String(input[k] || '').slice(0,2000)]));
   if (!facts.name) throw Error('Business name is required.');
   const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {

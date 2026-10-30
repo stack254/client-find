@@ -28,7 +28,7 @@ http.createServer(async (req, res) => {
       let input;
       try { input = JSON.parse(body); } catch { return json(res,400,{error:'Invalid JSON'}); }
       if (!input || typeof input !== 'object' || !input.name) return json(res,400,{error:'Business name required'});
-      try { return json(res,200,await analyze(input,{apiKey:process.env.GEMINI_API_KEY,model:process.env.GEMINI_MODEL || 'gemini-2.5-flash'})); }
+      try { return json(res,200,await analyze(input,{apiKey:process.env.GEMINI_API_KEY,model:process.env.GEMINI_MODEL || 'auto'})); }
       catch (error) { return json(res,502,{error:error.name === 'TimeoutError' ? 'AI analysis timed out. Try again.' : error.message}); }
     }
     if (url.pathname === '/api/discovery/status' && req.method === 'GET') return json(res, 200, { configured: Boolean(process.env.GOOGLE_MAPS_API_KEY) });
