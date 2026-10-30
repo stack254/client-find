@@ -3,7 +3,7 @@ let prospects = [];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function qualification(p) {
   if (p.score === undefined) return '';
-  return `<div class="tag">Research priority ${escape(p.score)}/100</div><div class="tag">${escape(p.websiteStatus)}</div><p>${escape(p.reviews)} Google reviews · ${p.reachable ? 'Phone listed' : 'No phone listed'}</p><small>${escape(p.scoreReasons.join(' · '))}. This score is not buying intent.</small>`;
+  return `<div class="tag">Research priority ${escape(p.score)}/100</div><div class="tag">${escape(p.websiteStatus)}</div><p>${escape(p.reviews)} Google reviews · ${p.reachable ? 'Phone listed' : 'No phone listed'}</p><details class="research-details"><summary>Why this score?</summary><small>${escape(p.scoreReasons.join(' · '))}. This score is not buying intent.</small></details>`;
 }
 function contactLinks(p) {
   const links = [];
@@ -138,3 +138,12 @@ $('#run-campaign').onclick = async () => {
 };
 
 $('#qualified-only').onchange = () => $('#discovery-results').classList.toggle('qualified-only', $('#qualified-only').checked);
+
+function updateResultSummary() {
+  const cards = [...$('#discovery-results').querySelectorAll('article')];
+  const visible = cards.filter(card => !$('#qualified-only').checked || card.dataset.qualified === 'true');
+  $('#result-count').textContent = cards.length ? `${visible.length} of ${cards.length} businesses shown` : 'Run a search to discover opportunities';
+  $('#filtered-empty').hidden = !cards.length || visible.length > 0;
+}
+new MutationObserver(updateResultSummary).observe($('#discovery-results'), {childList:true});
+$('#qualified-only').addEventListener('change', updateResultSummary);
