@@ -70,3 +70,45 @@ $('#try-demo').onclick = () => {
 };
 
 $('#country').onchange = () => { $('#location').value = ''; $('#location').placeholder = { KE:'e.g. Nairobi or Mombasa', BW:'e.g. Gaborone or Francistown', ZM:'e.g. Lusaka or Ndola' }[$('#country').value]; };
+
+const sectors = [
+  ['hotels and guest houses', 'Direct bookings and room enquiries'],
+  ['schools and training colleges', 'Admissions enquiries and course information'],
+  ['clinics and hospitals', 'Appointment requests and service information'],
+  ['tour operators and travel agencies', 'Tour enquiries and booking requests'],
+  ['salons and spas', 'Appointment booking'],
+  ['restaurants and catering businesses', 'Reservations and catering enquiries']
+];
+let stopCampaign = false;
+$('#stop-campaign').onclick = () => { stopCampaign = true; $('#campaign-status').textContent = 'Stopping after the current search…'; };
+$('#run-campaign').onclick = async () => {
+  const location = $('#location').value.trim();
+  const country = $('#country').value;
+  if (!location) { $('#campaign-status').textContent = 'Enter a town or area above first.'; $('#location').focus(); return; }
+  stopCampaign = false;
+  $('#run-campaign').disabled = true; $('#stop-campaign').disabled = false;
+  $('#discover-button').disabled = true; $('#try-demo').disabled = true;
+  const found = new Map(); let completed = 0; let failure = '';
+  try {
+    for (const [category, useCase] of sectors) {
+      if (stopCampaign) break;
+      $('#campaign-status').textContent = `Searching ${category} (${completed + 1}/${sectors.length})… ${found.size} unique businesses found.`;
+      const response = await fetch('/api/discover?' + new URLSearchParams({country,location,category}));
+      const result = await response.json();
+      if (!response.ok) throw Error(result.error || 'Search failed');
+      for (const p of result) {
+        const id = p.placeId || [p.name,p.location].join('|');
+        if (!found.has(id)) found.set(id, {...p, service:p.priority === 'Review first' ? 'Website development' : 'Custom software', evidence:`${p.evidence} Potential project: ${useCase.toLowerCase()}. Verify whether this is already supported and whether the business needs it.`});
+      }
+      completed++;
+    }
+  } catch (error) { failure = error.message; }
+  finally {
+    discoveryResults = [...found.values()].sort((a,b) => Number(b.priority === 'Review first') - Number(a.priority === 'Review first'));
+    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#provider-status').textContent = 'Source: Google Maps. Ranked by available listing evidence, not confirmed buying intent.';
+    $('#campaign-status').textContent = `${failure ? 'Run interrupted: ' + failure : stopCampaign ? 'Run stopped.' : 'Run complete.'} ${completed} searches completed; ${found.size} unique businesses available for review.`;
+    $('#run-campaign').disabled = false; $('#stop-campaign').disabled = true;
+    $('#discover-button').disabled = false; $('#try-demo').disabled = false;
+  }
+};

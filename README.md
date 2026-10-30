@@ -37,3 +37,7 @@ Set `GOOGLE_MAPS_API_KEY` securely in the server environment, enable Google Plac
 Search results are transient until explicitly reviewed and saved. Missing website data is not proof of an absent website; retail category is not proof that an online store is needed. Google Maps Platform terms govern use and retention of returned data; review applicable terms before retaining provider content or operating a lead-generation workflow. This app does not verify emails, crawl websites, send messages, or guarantee sales.
 
 Run `npm test` for provider-contract and opportunity-classification tests. Live discovery needs a configured key and has not yet been validated.
+
+## Automatic opportunity runs
+
+Choose a country and town, then click Find opportunities. The browser runs up to six sequential searches across accommodation, education, healthcare, tourism, beauty and restaurants. It deduplicates results by Google place ID and lists missing-website candidates first. Sector-specific booking/admissions/appointment suggestions require verification; websites are not crawled and demand is not inferred as fact. Stop ends the run after the current request; provider failures halt remaining requests and preserve partial results. Keep the page open. Results must be reviewed before saving. No scheduled searches or outreach sending occur.
