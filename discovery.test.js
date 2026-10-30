@@ -4,7 +4,7 @@ import { opportunity, discover } from './discovery.js';
 
 test('missing websites are explicitly uncertain and social domains are checked by hostname', () => {
   assert.equal(opportunity({}).service, 'Website development');
-  assert.match(opportunity({}).evidence, /Check whether/);
+  assert.match(opportunity({}).evidence, /Verify whether/);
   assert.equal(opportunity({websiteUri:'https://facebook.com/shop'}).service, 'Website development');
   assert.equal(opportunity({websiteUri:'https://facebook.com.example.org'}).service, 'Digital marketing');
   assert.equal(opportunity({websiteUri:'https://shop.example',types:['store']}).service, 'Online store');
@@ -32,4 +32,12 @@ test('each target country reaches the provider and unsupported countries do not'
     }});
   }
   await assert.rejects(discover({country:'XX',fetcher:() => {throw Error('must not call provider');}}), /Choose Kenya/);
+});
+
+test('qualification favors reachable social-only businesses without confusing lookalike domains', () => {
+ const strong = opportunity({websiteUri:'https://www.facebook.com/example',internationalPhoneNumber:'+2671234567',userRatingCount:12});
+ assert.equal(strong.score,100); assert.equal(strong.websiteOpportunity,true);
+ assert.equal(opportunity({websiteUri:'https://facebook.com.example.org',userRatingCount:12}).websiteOpportunity,false);
+ assert.equal(opportunity({}).score,45);
+ assert.equal(opportunity({websiteUri:'https://example.org',internationalPhoneNumber:'+260123456789'}).score,30);
 });

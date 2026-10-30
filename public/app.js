@@ -1,6 +1,10 @@
 const $ = selector => document.querySelector(selector);
 let prospects = [];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function qualification(p) {
+  if (p.score === undefined) return '';
+  return `<div class="tag">Research priority ${escape(p.score)}/100</div><div class="tag">${escape(p.websiteStatus)}</div><p>${escape(p.reviews)} Google reviews · ${p.reachable ? 'Phone listed' : 'No phone listed'}</p><small>${escape(p.scoreReasons.join(' · '))}. This score is not buying intent.</small>`;
+}
 function contactLinks(p) {
   const links = [];
   const raw = (p.contact || '').trim();
@@ -24,7 +28,7 @@ function render() {
   $('#stats').innerHTML = metrics.map(([label, value]) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   const search = $('#search').value.toLowerCase();
   const filtered = prospects.filter(p => (!$('#filter').value || p.status === $('#filter').value) && [p.name,p.location,p.service,p.need].join(' ').toLowerCase().includes(search));
-  $('#list').innerHTML = filtered.length ? filtered.map(p => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location || 'Location not recorded')} · ${escape(p.contact || 'Contact not recorded')}</p><span class="tag">${escape(p.service)}</span><span class="tag">${escape(p.status)}</span><p>${escape(p.need || 'Add an observed need to make your outreach more relevant.')}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-edit="${escape(p.id)}">Edit</button><button data-draft="${escape(p.id)}">Draft outreach</button></div></article>`).join('') : `<div class="empty"><strong>${prospects.length ? 'No matching prospects' : 'Your next client starts here.'}</strong>${prospects.length ? 'Try another search or stage.' : 'Add a business, record an opportunity, and prepare your first conversation.'}</div>`;
+  $('#list').innerHTML = filtered.length ? filtered.map(p => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location || 'Location not recorded')} · ${escape(p.contact || 'Contact not recorded')}</p><span class="tag">${escape(p.service)}</span><span class="tag">${escape(p.status)}</span><p>${escape(p.need || 'Add an observed need to make your outreach more relevant.')}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button class="secondary" data-edit="${escape(p.id)}">Edit</button><button data-draft="${escape(p.id)}">Draft outreach</button></div></article>`).join('') : `<div class="empty"><strong>${prospects.length ? 'No matching prospects' : 'Your next client starts here.'}</strong>${prospects.length ? 'Try another search or stage.' : 'Add a business, record an opportunity, and prepare your first conversation.'}</div>`;
 }
 async function load() { try { const response = await fetch('/api/prospects'); if (!response.ok) throw Error('Unable to load prospects'); prospects = await response.json(); render(); } catch (error) { $('#notice').textContent = error.message; } }
 function edit(prospect) {
@@ -67,14 +71,14 @@ $('#discovery-form').onsubmit = async event => {
     if (!response.ok) throw Error(result.error);
     discoveryResults = result;
     $('#provider-status').textContent = `${result.length} results · Source: Google Maps. Suggestions require your review.`;
-    $('#discovery-results').innerHTML = result.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    $('#discovery-results').innerHTML = result.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
   } catch (error) { $('#provider-status').textContent = error.message; } finally { $('#discover-button').disabled = false; }
 };
 $('#discovery-results').onclick = event => {
   const index = event.target.dataset.review;
   if (index === undefined) return;
   const p = discoveryResults[Number(index)];
-  edit({ name:p.name, location:p.location, contact:p.contact, website:p.website, service:p.service, status:'New', need:p.evidence, notes:p.demo ? 'FICTIONAL DEMO — not a real business or sales lead.' : 'Discovered through Google Maps. Verify details and provider retention terms before saving.' });
+  edit({ name:p.name, location:p.location, contact:p.contact, website:p.website, service:p.service, status:'New', need:p.evidence, notes:p.demo ? 'FICTIONAL DEMO — not a real business or sales lead.' : `Source: Google Maps. ${p.mapsUrl || ''}\nResearch priority: ${p.score ?? 'unscored'}/100. ${(p.scoreReasons || []).join('; ')}\n${p.reviews ?? 'Unknown'} reviews. Verify contact details and website need before outreach.` });
 };
 
 $('#try-demo').onclick = () => {
@@ -84,7 +88,7 @@ $('#try-demo').onclick = () => {
     {name:'Example cleaning company (DEMO)',location:'Mombasa · fictional example',service:'Digital marketing',evidence:'Example scenario: the owner wants more local enquiries and help planning campaigns.'}
   ].map(p => ({...p, demo:true, contact:'', website:''}));
   $('#provider-status').textContent = 'Demo examples — fictional businesses. No Google request or quota used.';
-  $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">Fictional example</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Try reviewing</button></div></article>`).join('');
+  $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">Fictional example</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p></div><div class="actions"><button class="secondary" data-review="${i}">Try reviewing</button></div></article>`).join('');
 };
 
 $('#country').onchange = () => { $('#location').value = ''; $('#location').placeholder = { KE:'e.g. Nairobi or Mombasa', BW:'e.g. Gaborone or Francistown', ZM:'e.g. Lusaka or Ndola' }[$('#country').value]; };
@@ -116,17 +120,19 @@ $('#run-campaign').onclick = async () => {
       if (!response.ok) throw Error(result.error || 'Search failed');
       for (const p of result) {
         const id = p.placeId || [p.name,p.location].join('|');
-        if (!found.has(id)) found.set(id, {...p, service:p.priority === 'Review first' ? 'Website development' : 'Custom software', evidence:`${p.evidence} Potential project: ${useCase.toLowerCase()}. Verify whether this is already supported and whether the business needs it.`});
+        if (!found.has(id)) found.set(id, {...p, service:p.websiteOpportunity ? 'Website development' : 'Custom software', evidence:`${p.evidence} Potential project: ${useCase.toLowerCase()}. Verify whether this is already supported and whether the business needs it.`});
       }
       completed++;
     }
   } catch (error) { failure = error.message; }
   finally {
-    discoveryResults = [...found.values()].sort((a,b) => Number(b.priority === 'Review first') - Number(a.priority === 'Review first'));
-    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
+    discoveryResults = [...found.values()].sort((a,b) => (b.score || 0) - (a.score || 0));
+    $('#discovery-results').innerHTML = discoveryResults.map((p,i) => `<article data-qualified="${Boolean(p.websiteOpportunity && p.reachable)}" class="prospect"><div><h3>${escape(p.name)}</h3><p>${escape(p.location)}</p><span class="tag">${escape(p.priority)}</span><span class="tag">${escape(p.service)}</span><p>${escape(p.evidence)}</p><p>${escape(p.contact)} ${escape(p.website)}</p>${qualification(p)}${contactLinks(p)}</div><div class="actions"><button class="secondary" data-review="${i}">Review prospect</button></div></article>`).join('');
     $('#provider-status').textContent = 'Source: Google Maps. Ranked by available listing evidence, not confirmed buying intent.';
     $('#campaign-status').textContent = `${failure ? 'Run interrupted: ' + failure : stopCampaign ? 'Run stopped.' : 'Run complete.'} ${completed} searches completed; ${found.size} unique businesses available for review.`;
     $('#run-campaign').disabled = false; $('#stop-campaign').disabled = true;
     $('#discover-button').disabled = false; $('#try-demo').disabled = false;
   }
 };
+
+$('#qualified-only').onchange = () => $('#discovery-results').classList.toggle('qualified-only', $('#qualified-only').checked);

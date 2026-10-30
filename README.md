@@ -41,3 +41,7 @@ Run `npm test` for provider-contract and opportunity-classification tests. Live 
 ## Automatic opportunity runs
 
 Choose a country and town, then click Find opportunities. The browser runs up to six sequential searches across accommodation, education, healthcare, tourism, beauty and restaurants. It deduplicates results by Google place ID and lists missing-website candidates first. Sector-specific booking/admissions/appointment suggestions require verification; websites are not crawled and demand is not inferred as fact. Stop ends the run after the current request; provider failures halt remaining requests and preserve partial results. Keep the page open. Results must be reviewed before saving. No scheduled searches or outreach sending occur.
+
+## Lead qualification
+
+Automatic runs rank results by an explicit research-priority score: missing website or social-only listing +45, listed phone +30, at least 10 reviews +15 (1–9 reviews +5), social presence +10. Reviews are supporting activity signals, not evidence of budget or buying intent. The website-opportunity filter requires both a missing/social-only site and a listed phone. Social detection uses hostname boundaries; website contents are not crawled. Review counts add a Google response field and may affect provider pricing. Saved prospect notes retain score reasons and the Maps source link. No automatic profile scraping or message sending occurs.
