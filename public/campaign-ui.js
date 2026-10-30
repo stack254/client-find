@@ -27,3 +27,6 @@ $('#saved-campaigns').onclick=async event=>{
  event.target.disabled=true;try{await campaignRequest(`/api/campaigns/${campaign}/${action}`,{});$('#campaign-feedback').textContent=action==='start'?'Campaign running on your laptop. You may close this browser tab.':'Pause requested; the current request will finish.';await refreshCampaigns();}catch(e){$('#campaign-feedback').textContent=e.message;await refreshCampaigns();}
 };
 refreshCampaigns();setInterval(refreshCampaigns,4000);
+const workspaceLinks=[...document.querySelectorAll('.app-nav a')];
+function highlightWorkspace(){const hash=location.hash||'#campaigns';for(const link of workspaceLinks){if(link.getAttribute('href')===hash)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}}
+window.addEventListener('hashchange',highlightWorkspace);highlightWorkspace();
