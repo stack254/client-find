@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node --env-file-if-exists=.env server.js", "test": "node discovery.test.js && node ai.test.js" },
+  "scripts": { "start": "node --env-file-if-exists=.env server.js", "test": "node discovery.test.js && node ai.test.js && node campaigns.test.js" },
   "engines": { "node": ">=22" }
 }

@@ -1,3 +1,4 @@
+import { Campaigns, markets, sectors } from './campaigns.js';
 import { analyze } from './ai.js';
 import http from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -8,6 +9,7 @@ import { discover, countries } from './discovery.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataPath = path.join(root, 'data', 'prospects.json');
+const campaigns = await new Campaigns(path.join(root,'data','campaigns.json'), job => { if (!process.env.GOOGLE_MAPS_API_KEY) throw Error('Set GOOGLE_MAPS_API_KEY in .env and restart.'); return discover({...job,apiKey:process.env.GOOGLE_MAPS_API_KEY}); }).init();
 let prospects;
 try { prospects = JSON.parse(await readFile(dataPath, 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; prospects = []; }
@@ -22,6 +24,17 @@ function json(res, code, body) { res.writeHead(code, { 'Content-Type': 'applicat
 http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/api/campaigns' && req.method === 'GET') return json(res,200,{markets,sectors,campaigns:campaigns.items});
+    if (url.pathname.startsWith('/api/campaigns') && req.method === 'POST') {
+      try {
+        let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>16000)return json(res,413,{error:'Request too large'});}
+        const input=JSON.parse(body||'{}');
+        if(url.pathname==='/api/campaigns')return json(res,201,await campaigns.create(input));
+        const match=url.pathname.match(/^\/api\/campaigns\/([a-z0-9-]+)\/(start|pause)$/);
+        if(!match)return json(res,404,{error:'Unknown campaign action'});
+        return json(res,200,await campaigns[match[2]](match[1]));
+      }catch(error){return json(res,400,{error:error.message});}
+    }
     if (url.pathname === '/api/analyze' && req.method === 'POST') {
       let body = '';
       for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 16000) return json(res, 413, {error:'Request too large'}); }
@@ -50,14 +63,16 @@ http.createServer(async (req, res) => {
       try { input = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
       if (!input || typeof input !== 'object') return json(res, 400, { error: 'Invalid prospect' });
       const record = {};
-      for (const field of ['name', 'location', 'contact', 'website', 'need', 'notes', 'service', 'status']) record[field] = String(input[field] ?? '').trim().slice(0, 4000);
+      for (const field of ['name', 'location', 'contact', 'website', 'need', 'notes', 'service', 'status', 'placeId', 'followUp']) record[field] = String(input[field] ?? '').trim().slice(0, 4000);
       if (!record.name || !services.includes(record.service) || !statuses.includes(record.status)) return json(res, 400, { error: 'Business name, valid service and status are required' });
       const existing = input.id ? prospects.find(p => p.id === input.id) : null;
+      if (!input.id && record.placeId && prospects.some(p => p.placeId === record.placeId)) return json(res,409,{error:'This business is already in your prospects. Edit the existing entry instead.'});
       if (input.id && !existing) return json(res, 404, { error: 'Prospect not found' });
       record.id = existing?.id ?? randomUUID();
       record.createdAt = existing?.createdAt ?? new Date().toISOString();
       record.updatedAt = new Date().toISOString();
       pending = pending.catch(() => {}).then(async () => {
+        if (!existing && record.placeId && prospects.some(p => p.placeId === record.placeId)) throw Error('Duplicate business');
         const next = existing ? prospects.map(p => p.id === record.id ? record : p) : [record, ...prospects];
         const previous = prospects; prospects = next;
         try { await save(); } catch (error) { prospects = previous; throw error; }
@@ -66,7 +81,7 @@ http.createServer(async (req, res) => {
       return json(res, 200, record);
     }
     if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
-    const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+    const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/campaign-ui.js':['campaign-ui.js','text/javascript'], '/style.css': ['style.css', 'text/css'] };
     const file = files[url.pathname];
     if (!file) return json(res, 404, { error: 'Not found' });
     res.writeHead(200, { 'Content-Type': file[1] + '; charset=utf-8' });
